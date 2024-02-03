@@ -10,7 +10,7 @@ from multiprocessing import Pool, TimeoutError
 from threading import Thread
 from urllib3.exceptions import ConnectTimeoutError
 from requests.adapters import HTTPAdapter, Retry
-jsonDump = Path(__file__).parent /'multiSets'
+
 
 cookies = {
     'connect.sid': 's%3AbmZQC_NHchqSOgDjLreoR60gQ-pZGqNs.WLFfG6d9Bktjuc1TGYurnvp1fhhP8W2wemYkb%2BVtPNc',
@@ -34,14 +34,16 @@ headers = {
 }
 
 params = {
-    'limit': '20',
+    'limit': '99999',
 }
 cpus = os.cpu_count()
 
-def scrape(idStart, idEnd):
+pwd =Path(__file__).parent
+
+def scrape(idStart, idEnd, userSetFolder):
     mostRecentTimeout = 0
     s = requests.Session()
-    retries = Retry(total=None, backoff_factor=.2, status_forcelist=[500,502,503,504]) 
+    retries = Retry(total=None, backoff_factor=.01, status_forcelist=[500,502,503,504]) 
     # forces retry on err code 500 502 503 504
     # .1 backoff does .05 .1 .2 .4 seconds between retries
     s.mount('https://', HTTPAdapter(max_retries=retries))
@@ -51,7 +53,7 @@ def scrape(idStart, idEnd):
             ezpz = json.loads(response.content)
             a= json.dumps(ezpz, indent=4)
             time = datetime.now()
-            with open(f'{jsonDump}/{i}.{time}.json','w+') as of:
+            with open(f'{userSetFolder}/{i}.{time}.json','w+') as of:
                 of.write(str(a))
                 of.close()
         except TimeoutError as te:
@@ -63,9 +65,8 @@ def scrape(idStart, idEnd):
             mostRecentTimeout = i
             i = i -1
 
-if __name__ == "__main__":
+def run(idStart = 0, idEnd=30000,userSetFolder=Path(__file__).parent /'multiSets_020224'):
     ts  = []
-    idStart, idEnd = 0, 30000
     
     divs = (idEnd-idStart)//cpus
     remainder = (idEnd-idStart)%cpus
@@ -79,9 +80,15 @@ if __name__ == "__main__":
 
 
     for i in range(cpus):
-            t = Thread(target=scrape, args=[startEnds[i][0],startEnds[i][1]])
+            t = Thread(target=scrape, args=[startEnds[i][0],startEnds[i][1], userSetFolder])
             t.start()
             ts.append(t)
 
     for t in ts:
-         t.join()
+         t.join() # some sort of deadlock error
+    return 1
+if __name__ == "__main__":
+    idStart, idEnd, userSetFolder = int(sys.argv[1]), int(sys.argv[2]), pwd / sys.argv[3]
+    res = run(idStart, idEnd,userSetFolder)
+    if res != 1:
+        raise Exception('multiscrape failed to return 1')

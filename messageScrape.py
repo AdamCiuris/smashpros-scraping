@@ -11,7 +11,8 @@ from threading import Thread
 from urllib3.exceptions import ConnectTimeoutError
 from requests.adapters import HTTPAdapter, Retry
 
-jsonDump = Path(__file__).parent /'3rd'
+
+pwd = Path(__file__).parent
 
 
 cookies = {
@@ -61,53 +62,57 @@ json_data = {
 
 cpus = os.cpu_count()
 mostRecentTimeout = 0
-def scrape(ids):
+def scrape(ids,outputFolder,threadNum):
     s = requests.Session()
     retries = Retry(total=None, backoff_factor=.1, status_forcelist=[500,502,503,504])
     s.mount('https://', HTTPAdapter(max_retries=retries))
+    with open(pwd/ str(threadNum), 'w+') as debugfile:
+        debugID = 1
+        for i in ids:
+            print('scraping messages from set id: ', i)
+            try:
+                response = s.get(f'https://smashpros.gg/api/sets/current/{i}' , cookies=cookies, headers=headers, timeout=None,)
+                ezpz = json.loads(response.content)
+                a= json.dumps(ezpz, indent=4)
+                time = datetime.now()
+                with open(f'{outputFolder}/{i}.{time}.json','w+') as of:
+                    of.write(str(a))
+                    of.close()
+            except TimeoutError as te:
+                print('TimeoutError at' + str(i)+ ', previous timeout at ')
+                mostRecentTimeout = i
+                ids.append(i)
+            except ConnectTimeoutError as cte:
+                print('ConnectTimeoutError at' + str(i)+ ', previous timeout ' )
+                mostRecentTimeout = i
+                ids.append(i)
+                
+            except Exception as e:
+                print('general exception: '+e+' at ' + str(i))
+                ids.append(i)
+            debugfile.write(f'{i}_{debugID},\n')
+            debugID+=1
+        print('finished ids: ', ids)
+    debugfile.close()
 
-    for i in ids:
-        try:
-            response = s.get(f'https://smashpros.gg/api/sets/current/{i}' , cookies=cookies, headers=headers, timeout=None,)
-            ezpz = json.loads(response.content)
-            a= json.dumps(ezpz, indent=4)
-            time = datetime.now()
-            with open(f'{jsonDump}/{i}.{time}.json','w+') as of:
-                of.write(str(a))
-                of.close()
-        except TimeoutError as te:
-            print('TimeoutError at' + str(i)+ ', previous timeout at ')
-            mostRecentTimeout = i
-            ids.append(i)
-        except ConnectTimeoutError as cte:
-            print('ConnectTimeoutError at' + str(i)+ ', previous timeout ' )
-            mostRecentTimeout = i
-            ids.append(i)
-            
-        except Exception as e:
-            print('general exception at' + str(i)+ ', previous timeout at ')
-            ids.append(i)
-            
 
 
 
 
-def matchIDs():
-    with open('./missedIDs/missedIds', 'r+') as of:
+def matchIDs(symDiffIds):
+    with open(symDiffIds, 'r+') as of:
           cont = of.readlines()
     lol = []
     for line in cont:
          lol.append(line.split(',')[0])
     return lol
     
-    
-
-if __name__ == "__main__":
+def run(symDiffIds,outputFolder):
     ts  = []
-    allIds = matchIDs()
+    allIds = matchIDs(symDiffIds)
     idStart, idEnd = 0, len(allIds)
     
-    divs = (idEnd-idStart)//cpus
+    divs = (idEnd-idStart)//cpus # TODO causes issues when fewer ids than cpus
     remainder = (idEnd-idStart)%cpus
     startEnds = []
     st, end = 0, divs
@@ -116,12 +121,18 @@ if __name__ == "__main__":
         st = end
         end += divs
     startEnds.append((st,end+remainder))
-    # scrape(startEnds[0])
 
+    tcount = 0
     for i in range(cpus):
-            t = Thread(target=scrape, args=[startEnds[i]])
-            t.start()
+            t = Thread(target=scrape, args=[startEnds[i],outputFolder,tcount])
+            print('starting thread: ' + str(tcount) + ' with ' + str(len(startEnds[tcount])) + ' ids.')
             ts.append(t)
+            t.start()
+            tcount+=1
 
     for t in ts:
          t.join()
+
+if __name__ == "__main__":
+    symDiffIds,outputFolder = pwd/sys.argv[1], pwd/sys.argv[2]
+    run(symDiffIds,outputFolder)

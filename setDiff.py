@@ -15,25 +15,30 @@ def compare(one, two):
     return set(one).symmetric_difference(set(two))
 
 
-def matchIDs():
-    with open( pwd/'matchIds'/'allasof012924uniques', 'r+') as of:
+def matchIDs(newIds):
+    """needs all unique match ids that have already been run,"""
+    with open( newIds, 'r+') as of:
           cont = of.readlines()
     lol = []
     for line in cont:
          lol.append(line.split(',')[0])
     return lol
 
-def writeDiffs(y):
-    y = list(y)
-    with open(pwd/'missedIDs'/'missedIds', 'w+') as of:
-          for id in y:
+def writeDiffs(symdiff, symDiffIdsOutputFolderFile):
+    symdiff = list(symdiff)
+    with open(symDiffIdsOutputFolderFile, 'w+') as of:
+          for id in symdiff:
             cont = of.write(f'{id},\n')
 
-
-if __name__ == "__main__":
-    ALREADYREADIDS = os.listdir(pwd / '3rd')
+def run(oldIds, newIds,symDiffIds):
+    ALREADYREADIDS = os.listdir(oldIds)
     oldIds = list(map(lambda x: x.split('.')[0], ALREADYREADIDS))
 
-    ALLIDS = matchIDs()
-    y =compare(ALLIDS, oldIds)
-    writeDiffs(y)
+    ALLIDS = matchIDs(newIds)
+    symdiff =compare(ALLIDS, oldIds)
+    writeDiffs(symdiff, symDiffIds)
+
+if __name__ == "__main__":
+    oldIds, newIds, symDiffIds = pwd/sys.argv[1],pwd/sys.argv[2],pwd/sys.argv[3]
+    res = run(oldIds, newIds,symDiffIds)
+
