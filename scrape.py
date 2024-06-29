@@ -30,6 +30,10 @@ headers = {
     'sec-ch-ua-mobile': '?0',
     'sec-ch-ua-platform': '"Linux"',
 }
+proxy = {
+    'http':  'socks5://localhost:9050',
+    'https': 'socks5://localhost:9050',
+}
 
 params = {
     'limit': '99999999',
@@ -41,7 +45,7 @@ retries = Retry(total=None, backoff_factor=.1, status_forcelist=[500,502,503,504
 s.mount('https://', HTTPAdapter(max_retries=retries))
 for i in range(9463,30000):
     try:
-        response = s.get(f'https://smashpros.gg/api/sets/user/{i}/complete', params=params, cookies=cookies, headers=headers, timeout=None,)
+        response = s.get(f'https://smashpros.gg/api/sets/user/{i}/complete', params=params, proxies=proxy, cookies=cookies, headers=headers, timeout=None,)
         ezpz = json.loads(response.content)
         a= json.dumps(ezpz, indent=4)
         time = datetime.now()
