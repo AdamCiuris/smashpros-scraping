@@ -43,7 +43,7 @@ mostRecentTimeout = 0
 s = requests.Session()
 retries = Retry(total=None, backoff_factor=.1, status_forcelist=[500,502,503,504])
 s.mount('https://', HTTPAdapter(max_retries=retries))
-for i in range(9463,30000):
+for i in range(0,30000):
     try:
         response = s.get(f'https://smashpros.gg/api/sets/user/{i}/complete', params=params, proxies=proxy, cookies=cookies, headers=headers, timeout=None,)
         ezpz = json.loads(response.content)
